@@ -39,6 +39,27 @@ Amazon Reviews 2023: https://amazon-reviews-2023.github.io/
 
 Use its license/terms and dataset documentation to select the appropriate subset. Product/review data is not, by itself, a validated ground-truth dataset of policy violations. Avoid downloading the full dataset unless you have sufficient storage and a clear data-processing plan.
 
+## Import a sample from Amazon Reviews 2023
+
+The app's **Settings** page includes an on-demand importer for a small category-specific sample.
+Choose a category and import up to 100 listings. The importer streams metadata, downloads available
+product images, skips duplicate titles, and runs the prototype's existing review heuristics.
+
+You can also run the app from Codespaces:
+
+```bash
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
+```
+
+Then open **Settings** and select **Import sample into catalog**. Start with 10–25 products.
+The full Amazon Reviews 2023 collection is very large; this app intentionally does not download it all.
+Imported files and SQLite records are local to the running environment. Streamlit Community Cloud's
+local files are not durable, so configure persistent database and object storage before relying on imports.
+The dataset contains product metadata and reviews, not verified policy-violation labels.
+
+Source documentation: https://amazon-reviews-2023.github.io/
+
 ## Streamlit Community Cloud
 
 1. Open https://share.streamlit.io/ and sign in with GitHub.
