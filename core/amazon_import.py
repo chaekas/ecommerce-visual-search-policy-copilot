@@ -90,6 +90,7 @@ def import_category_sample(
         CATEGORY_CONFIGS[category],
         split="full",
         streaming=True,
+        trust_remote_code=True,
     )
     with requests.Session() as session:
         for record in dataset:
