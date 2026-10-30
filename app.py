@@ -11,6 +11,7 @@ import streamlit as st
 from PIL import Image
 
 from core.analysis import assess_listing, image_color_and_histogram
+from core.amazon_import import CATEGORY_CONFIGS, import_category_sample
 from core.database import add_product, get_product, init_db, list_events, list_products, update_moderation
 from core.search import search_products
 
@@ -233,6 +234,47 @@ elif page == "Moderation History":
         st.download_button("Export product catalog (CSV)", export_df.to_csv(index=False).encode("utf-8"), "product_catalog.csv", "text/csv")
 
 elif page == "Settings":
+    st.subheader("Import a sample from Amazon Reviews 2023")
+    st.write(
+        "Import a small category-specific sample of product metadata and downloadable product images "
+        "directly into this app. The importer skips duplicate titles and records without usable images."
+    )
+    st.warning(
+        "This dataset is very large. Import a small sample first. These records are not labeled ground-truth "
+        "policy violations; the app's rule-based flags are only suggestions for human review. "
+        "On Streamlit Community Cloud, local database and image files may disappear after restarts."
+    )
+    with st.form("amazon_dataset_import"):
+        dataset_category = st.selectbox("Amazon product category", list(CATEGORY_CONFIGS.keys()), index=list(CATEGORY_CONFIGS.keys()).index("Electronics"))
+        sample_limit = st.slider("Maximum products to import", min_value=10, max_value=100, value=25, step=5)
+        import_clicked = st.form_submit_button("Import sample into catalog", type="primary")
+    if import_clicked:
+        progress = st.progress(0.0, text="Connecting to the dataset...")
+        status = st.empty()
+        def report_progress(fraction, stats):
+            progress.progress(fraction, text=f"Imported {stats['imported']} of {sample_limit} products...")
+            status.caption(f"Scanned: {stats['scanned']} · Imported: {stats['imported']} · No image: {stats['skipped_no_image']} · Errors: {stats['skipped_error']}")
+        try:
+            stats = import_category_sample(
+                dataset_category,
+                sample_limit,
+                upload_dir=UPLOAD_DIR,
+                progress_callback=report_progress,
+            )
+            progress.progress(1.0, text="Import finished.")
+            st.success(
+                f"Imported {stats['imported']} products. Scanned {stats['scanned']} records; "
+                f"skipped {stats['skipped_duplicate']} duplicate/empty titles, "
+                f"{stats['skipped_no_image']} without an image, and {stats['skipped_error']} with download/processing errors."
+            )
+            st.info("Open Product Catalog or Dashboard to see the imported sample.")
+            st.rerun()
+        except Exception as exc:
+            progress.empty()
+            st.error(f"Dataset import failed: {exc}")
+            st.caption("If the dataset service or hosting environment blocks the request, try again later or import locally from Codespaces.")
+
+    st.divider()
     st.subheader("Prototype configuration")
     st.markdown("""
     **Current capabilities**
@@ -249,5 +291,4 @@ elif page == "Settings":
     - Integrate trained image/text embedding models and a calibrated classifier; evaluate precision, recall, false positives, and subgroup performance.
     - Add deletion, retention, consent, and privacy controls for seller/customer data.
     """)
-    st.info("Amazon Reviews 2023 primarily provides review/product metadata; do not assume it contains a ready-to-use, fully labeled marketplace policy-violation dataset.")
-    st.markdown("Dataset: [Amazon Reviews 2023](https://amazon-reviews-2023.github.io/)")
+    st.markdown("Dataset source: [Amazon Reviews 2023](https://amazon-reviews-2023.github.io/)")
